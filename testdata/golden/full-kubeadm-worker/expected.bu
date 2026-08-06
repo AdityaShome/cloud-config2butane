@@ -1,0 +1,55 @@
+version: 1.1.0
+variant: flatcar
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+        - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI admin@example.com
+storage:
+  files:
+    - path: /etc/kubernetes/kubeadm-join-config.yaml
+      contents:
+        inline: |
+          apiVersion: kubeadm.k8s.io/v1beta3
+          kind: JoinConfiguration
+          discovery:
+            bootstrapToken:
+              apiServerEndpoint: 10.0.0.1:6443
+              token: abcdef.0123456789abcdef
+              unsafeSkipCAVerification: true
+          nodeRegistration:
+            criSocket: unix:///run/containerd/containerd.sock
+            kubeletExtraArgs:
+              cloud-provider: external
+      mode: 0600
+    - path: /etc/hostname
+      contents:
+        inline: |
+          worker-01
+      mode: 0644
+    - path: /opt/cloud-config2butane/runcmd.sh
+      contents:
+        inline: |
+          #!/bin/bash
+          set -euo pipefail
+
+          kubeadm join --config=/etc/kubernetes/kubeadm-join-config.yaml
+      mode: 0755
+systemd:
+  units:
+    - contents: |
+        [Unit]
+        Description=Run cloud-config runcmd once
+        ConditionPathExists=!/var/lib/cloud-config2butane/runcmd.done
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=/usr/bin/mkdir -p /var/lib/cloud-config2butane
+        ExecStart=/opt/cloud-config2butane/runcmd.sh
+        ExecStartPost=/usr/bin/touch /var/lib/cloud-config2butane/runcmd.done
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+      enabled: true
+      name: cloud-config2butane-runcmd.service
