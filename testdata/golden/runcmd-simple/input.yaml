@@ -1,0 +1,4 @@
+#cloud-config
+runcmd:
+  - systemctl restart sshd
+  - echo done > /tmp/runcmd-marker

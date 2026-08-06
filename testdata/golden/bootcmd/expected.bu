@@ -1,0 +1,30 @@
+variant: flatcar
+version: 1.1.0
+storage:
+  files:
+    - path: /opt/cloud-config2butane/bootcmd.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash
+          set -euo pipefail
+
+          echo "boot $(date)" >> /var/log/bootcmd.log
+systemd:
+  units:
+    - name: cloud-config2butane-bootcmd.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run cloud-config bootcmd every boot
+        DefaultDependencies=no
+        After=systemd-remount-fs.service
+        Before=sysinit.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/opt/cloud-config2butane/bootcmd.sh
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=sysinit.target

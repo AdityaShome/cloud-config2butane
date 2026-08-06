@@ -1,0 +1,31 @@
+variant: flatcar
+version: 1.1.0
+storage:
+  files:
+    - path: /opt/cloud-config2butane/runcmd.sh
+      mode: 0755
+      contents:
+        inline: |
+          #!/bin/bash
+          set -euo pipefail
+
+          systemctl restart sshd
+          echo done > /tmp/runcmd-marker
+systemd:
+  units:
+    - name: cloud-config2butane-runcmd.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Run cloud-config runcmd once
+        ConditionPathExists=!/var/lib/cloud-config2butane/runcmd.done
+
+        [Service]
+        Type=oneshot
+        ExecStartPre=/usr/bin/mkdir -p /var/lib/cloud-config2butane
+        ExecStart=/opt/cloud-config2butane/runcmd.sh
+        ExecStartPost=/usr/bin/touch /var/lib/cloud-config2butane/runcmd.done
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target

@@ -1,0 +1,3 @@
+#cloud-config
+bootcmd:
+  - echo "boot $(date)" >> /var/log/bootcmd.log
