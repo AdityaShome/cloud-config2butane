@@ -1,0 +1,2 @@
+#cloud-config
+fqdn: worker-01.cluster.example.com
