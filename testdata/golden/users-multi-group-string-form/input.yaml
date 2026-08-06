@@ -1,0 +1,5 @@
+#cloud-config
+users:
+  - name: alice
+    groups: wheel, docker, dialout
+    sudo: ALL=(ALL) NOPASSWD:ALL

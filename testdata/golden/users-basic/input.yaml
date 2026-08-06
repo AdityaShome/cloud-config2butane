@@ -1,0 +1,8 @@
+#cloud-config
+users:
+  - name: alice
+    gecos: Alice Example
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI alice@example.com
+    passwd: $6$rounds=4096$saltsalt$hashhashhashhashhashhashhashhashhashhashhashhashha
