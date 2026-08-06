@@ -1,0 +1,12 @@
+#cloud-config
+write_files:
+  - path: /etc/systemd/system/demo.service
+    content: |
+      [Unit]
+      Description=demo
+
+      [Service]
+      ExecStart=/usr/bin/true
+
+      [Install]
+      WantedBy=multi-user.target

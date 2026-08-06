@@ -25,7 +25,7 @@ func TestFilesPlain(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: "hello\n"},
 	}
-	out, errs := Files(files)
+	out, _, errs := Files(files)
 	if len(errs) != 0 {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
@@ -42,7 +42,7 @@ func TestFilesBase64(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: encoded, Encoding: "b64"},
 	}
-	out, errs := Files(files)
+	out, _, errs := Files(files)
 	if len(errs) != 0 {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
@@ -70,7 +70,7 @@ func TestFilesGzipBase64(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: encoded, Encoding: "gz+b64"},
 	}
-	out, errs := Files(files)
+	out, _, errs := Files(files)
 	if len(errs) != 0 {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
@@ -84,7 +84,7 @@ func TestFilesGzipOnly(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: string(compressed), Encoding: "gzip"},
 	}
-	out, errs := Files(files)
+	out, _, errs := Files(files)
 	if len(errs) != 0 {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
@@ -97,7 +97,7 @@ func TestFilesUnsupportedEncoding(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: "x", Encoding: "rot13"},
 	}
-	_, errs := Files(files)
+	_, _, errs := Files(files)
 	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "unsupported encoding") {
 		t.Fatalf("got %v", errs)
 	}
@@ -107,7 +107,7 @@ func TestFilesOwnerUserAndGroup(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Owner: "root:wheel"},
 	}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].User.Name == nil || *out[0].User.Name != "root" {
 		t.Errorf("got user %v", out[0].User.Name)
 	}
@@ -120,7 +120,7 @@ func TestFilesOwnerUserOnly(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Owner: "root"},
 	}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].User.Name == nil || *out[0].User.Name != "root" {
 		t.Errorf("got user %v", out[0].User.Name)
 	}
@@ -137,7 +137,7 @@ func TestFilesPermissionsPassthrough(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Permissions: mode},
 	}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].Mode == nil || *out[0].Mode != 0644 {
 		t.Errorf("got mode %v, want 0644", out[0].Mode)
 	}
@@ -145,7 +145,7 @@ func TestFilesPermissionsPassthrough(t *testing.T) {
 
 func TestFilesPermissionsUnsetLeavesModeNil(t *testing.T) {
 	files := []cloudconfig.File{{Path: "/etc/motd"}}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].Mode != nil {
 		t.Errorf("expected nil mode, got %v", *out[0].Mode)
 	}
@@ -155,7 +155,7 @@ func TestFilesAppend(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/hosts", Content: "127.0.0.1 extra\n", Append: true},
 	}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].Contents.Inline != nil {
 		t.Errorf("expected Contents to be empty when appending, got %v", out[0].Contents.Inline)
 	}
@@ -173,15 +173,71 @@ func TestFilesPrivateKeyForcesMode0600(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/ssl/key.pem", Content: key, Permissions: loose},
 	}
-	out, _ := Files(files)
+	out, _, _ := Files(files)
 	if out[0].Mode == nil || *out[0].Mode != 0600 {
 		t.Errorf("got mode %v, want forced 0600", out[0].Mode)
 	}
 }
 
+func TestFilesSystemdUnitPassthrough(t *testing.T) {
+	unitContents := "[Unit]\nDescription=demo\n\n[Service]\nExecStart=/usr/bin/true\n\n[Install]\nWantedBy=multi-user.target\n"
+	files := []cloudconfig.File{
+		{Path: "/etc/systemd/system/demo.service", Content: unitContents},
+	}
+	outFiles, outUnits, errs := Files(files)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(outFiles) != 0 {
+		t.Errorf("expected no generic files, got %v", outFiles)
+	}
+	if len(outUnits) != 1 {
+		t.Fatalf("expected 1 unit, got %v", outUnits)
+	}
+	u := outUnits[0]
+	if u.Name != "demo.service" {
+		t.Errorf("got unit name %q", u.Name)
+	}
+	if u.Enabled == nil || !*u.Enabled {
+		t.Errorf("expected unit to be enabled by default")
+	}
+	if u.Contents == nil || *u.Contents != unitContents {
+		t.Errorf("got contents %v", u.Contents)
+	}
+}
+
+func TestFilesSystemdDropinNotTreatedAsUnit(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/etc/systemd/system/demo.service.d/override.conf", Content: "[Service]\n"},
+	}
+	outFiles, outUnits, errs := Files(files)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(outUnits) != 0 {
+		t.Errorf("expected drop-in to stay a generic file, got units %v", outUnits)
+	}
+	if len(outFiles) != 1 || outFiles[0].Path != "/etc/systemd/system/demo.service.d/override.conf" {
+		t.Errorf("got files %v", outFiles)
+	}
+}
+
+func TestFilesSystemdUnitOutsideUnitDirStaysGenericFile(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/opt/demo.service", Content: "not a real unit"},
+	}
+	outFiles, outUnits, _ := Files(files)
+	if len(outUnits) != 0 {
+		t.Errorf("expected no units for a path outside %s, got %v", systemdUnitDir, outUnits)
+	}
+	if len(outFiles) != 1 {
+		t.Errorf("expected the file to pass through as a generic file, got %v", outFiles)
+	}
+}
+
 func TestFilesMissingPath(t *testing.T) {
 	files := []cloudconfig.File{{Content: "x"}}
-	out, errs := Files(files)
+	out, _, errs := Files(files)
 	if len(out) != 0 {
 		t.Errorf("expected pathless file to be skipped, got %v", out)
 	}

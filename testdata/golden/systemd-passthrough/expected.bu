@@ -1,0 +1,15 @@
+variant: flatcar
+version: 1.1.0
+systemd:
+  units:
+    - name: demo.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=demo
+
+        [Service]
+        ExecStart=/usr/bin/true
+
+        [Install]
+        WantedBy=multi-user.target

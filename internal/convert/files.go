@@ -13,12 +13,40 @@ import (
 	"github.com/AdityaShome/cloud-config2butane/internal/cloudconfig"
 )
 
+// systemdUnitDir is where a write_files entry is recognized as a systemd
+// unit rather than a generic file.
+const systemdUnitDir = "/etc/systemd/system/"
+
+// systemdUnitSuffixes are the unit types this transpiler passes through
+// to systemd.units[] when found under systemdUnitDir.
+var systemdUnitSuffixes = []string{".service", ".socket", ".timer", ".path", ".mount", ".target"}
+
+// isSystemdUnitPath reports whether path names a unit file directly under
+// systemdUnitDir - not a drop-in override (foo.service.d/override.conf),
+// which is left as a generic file since it isn't a complete unit itself.
+func isSystemdUnitPath(path string) bool {
+	name, ok := strings.CutPrefix(path, systemdUnitDir)
+	if !ok || strings.Contains(name, "/") {
+		return false
+	}
+	for _, suffix := range systemdUnitSuffixes {
+		if strings.HasSuffix(name, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
 // Files converts cloud-config write_files entries into Butane storage
 // files. Encoded content (base64/gzip/gz+b64) is decoded back to plain
 // bytes so it can be embedded as inline content. append maps onto
-// Butane's own File.Append, which Ignition supports natively.
-func Files(files []cloudconfig.File) ([]butane.File, []error) {
-	var out []butane.File
+// Butane's own File.Append, which Ignition supports natively. Entries
+// that look like systemd unit files (see isSystemdUnitPath) are routed
+// to systemd.units[] instead, enabled by default, so their [Install]
+// section actually takes effect.
+func Files(files []cloudconfig.File) ([]butane.File, []butane.Unit, []error) {
+	var outFiles []butane.File
+	var outUnits []butane.Unit
 	var errs []error
 
 	for _, f := range files {
@@ -30,6 +58,16 @@ func Files(files []cloudconfig.File) ([]butane.File, []error) {
 		content, err := decodeContent(f.Content, f.Encoding)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("write_files[%s]: %w", f.Path, err))
+			continue
+		}
+
+		if isSystemdUnitPath(f.Path) {
+			name, _ := strings.CutPrefix(f.Path, systemdUnitDir)
+			outUnits = append(outUnits, butane.Unit{
+				Name:     name,
+				Enabled:  boolPtr(true),
+				Contents: strPtr(content),
+			})
 			continue
 		}
 
@@ -62,10 +100,10 @@ func Files(files []cloudconfig.File) ([]butane.File, []error) {
 			bf.Contents = resource
 		}
 
-		out = append(out, bf)
+		outFiles = append(outFiles, bf)
 	}
 
-	return out, errs
+	return outFiles, outUnits, errs
 }
 
 func isPrivateKey(content string) bool {
