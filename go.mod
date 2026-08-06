@@ -9,6 +9,7 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect
+	github.com/clarketm/json v1.17.1 // indirect
 	github.com/coreos/go-json v0.0.0-20230131223807-18775e0fb4fb // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.7.0 // indirect
