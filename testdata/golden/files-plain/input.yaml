@@ -1,0 +1,7 @@
+#cloud-config
+write_files:
+  - path: /etc/motd
+    owner: root:root
+    permissions: "0644"
+    content: |
+      Welcome to Flatcar.

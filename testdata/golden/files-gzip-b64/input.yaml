@@ -1,0 +1,5 @@
+#cloud-config
+write_files:
+  - path: /etc/greeting
+    encoding: gz+b64
+    content: H4sIAAAAAAAAA/NIzcnJV0grys9VSK/KLNBOSixONTPhAgCK4i6eFwAAAA==
