@@ -1,0 +1,5 @@
+github.com/coreos/butane v0.29.0 h1:kqVRTEPFELZEs//cnpQl5ifJ2x2KCl6pukfxge9jfPQ=
+github.com/coreos/butane v0.29.0/go.mod h1:cWzlkZC8bTNxfT9EaNFUPLqp6/gEM4qhunp1U6cMvrM=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
