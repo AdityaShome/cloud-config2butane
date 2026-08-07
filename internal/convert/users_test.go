@@ -32,6 +32,14 @@ func TestUsersBasic(t *testing.T) {
 	}
 }
 
+func TestUsersPrimaryGroup(t *testing.T) {
+	users := []cloudconfig.User{{Name: "alice", PrimaryGroup: "wheel"}}
+	out, _, _ := Users(users, nil)
+	if out[0].PrimaryGroup == nil || *out[0].PrimaryGroup != "wheel" {
+		t.Errorf("got primary group %v, want wheel", out[0].PrimaryGroup)
+	}
+}
+
 func TestUsersMissingOptionalFields(t *testing.T) {
 	users := []cloudconfig.User{{Name: "bob"}}
 	out, _, errs := Users(users, nil)
@@ -178,6 +186,17 @@ func TestUsersNoSudoMeansNoSudoFile(t *testing.T) {
 	_, sudoFile, _ := Users(users, nil)
 	if sudoFile != nil {
 		t.Errorf("expected no sudo file, got %+v", sudoFile)
+	}
+}
+
+func TestUsersSudoBlankRuleIgnored(t *testing.T) {
+	users := []cloudconfig.User{
+		{Name: "alice", Sudo: cloudconfig.StringOrList{"  ", "ALL=(ALL) NOPASSWD:ALL"}},
+	}
+	_, sudoFile, _ := Users(users, nil)
+	want := "alice ALL=(ALL) NOPASSWD:ALL\n"
+	if sudoFile == nil || *sudoFile.Contents.Inline != want {
+		t.Fatalf("got %+v, want content %q", sudoFile, want)
 	}
 }
 

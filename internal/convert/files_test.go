@@ -93,6 +93,48 @@ func TestFilesGzipOnly(t *testing.T) {
 	}
 }
 
+func TestFilesInvalidBase64(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/etc/motd", Content: "not-valid-base64!!!", Encoding: "b64"},
+	}
+	_, _, errs := Files(files)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "invalid base64") {
+		t.Fatalf("got %v", errs)
+	}
+}
+
+func TestFilesInvalidGzip(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/etc/motd", Content: "not gzip data", Encoding: "gzip"},
+	}
+	_, _, errs := Files(files)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "invalid gzip") {
+		t.Fatalf("got %v", errs)
+	}
+}
+
+func TestFilesInvalidBase64InGzipCombo(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/etc/motd", Content: "not-valid-base64!!!", Encoding: "gz+b64"},
+	}
+	_, _, errs := Files(files)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "invalid base64") {
+		t.Fatalf("got %v", errs)
+	}
+}
+
+func TestFilesTruncatedGzipBody(t *testing.T) {
+	compressed := gzipBytes(t, "hello, this is long enough to truncate mid-stream\n")
+	truncated := compressed[:len(compressed)-4]
+	files := []cloudconfig.File{
+		{Path: "/etc/motd", Content: string(truncated), Encoding: "gzip"},
+	}
+	_, _, errs := Files(files)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "invalid gzip") {
+		t.Fatalf("got %v", errs)
+	}
+}
+
 func TestFilesUnsupportedEncoding(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: "x", Encoding: "rot13"},
@@ -219,6 +261,19 @@ func TestFilesSystemdDropinNotTreatedAsUnit(t *testing.T) {
 	}
 	if len(outFiles) != 1 || outFiles[0].Path != "/etc/systemd/system/demo.service.d/override.conf" {
 		t.Errorf("got files %v", outFiles)
+	}
+}
+
+func TestFilesSystemdUnitDirButUnrecognizedSuffixStaysGenericFile(t *testing.T) {
+	files := []cloudconfig.File{
+		{Path: "/etc/systemd/system/README.md", Content: "not a unit"},
+	}
+	outFiles, outUnits, _ := Files(files)
+	if len(outUnits) != 0 {
+		t.Errorf("expected an unrecognized suffix to stay a generic file, got units %v", outUnits)
+	}
+	if len(outFiles) != 1 {
+		t.Errorf("expected the file to pass through as a generic file, got %v", outFiles)
 	}
 }
 
