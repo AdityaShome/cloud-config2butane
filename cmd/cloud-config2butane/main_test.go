@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,6 +79,61 @@ func TestRunValidateFalseSkipsButaneCheck(t *testing.T) {
 	if err := run(in, "", false); err != nil {
 		t.Fatalf("expected -validate=false to skip the check that fails otherwise, got %v", err)
 	}
+}
+
+func TestFlattenErrorsSingle(t *testing.T) {
+	err := errors.New("boom")
+	got := flattenErrors(err)
+	if len(got) != 1 || got[0] != "boom" {
+		t.Errorf("got %v", got)
+	}
+}
+
+func TestFlattenErrorsWrappedSingle(t *testing.T) {
+	err := fmt.Errorf("reading file: %w", errors.New("no such file"))
+	got := flattenErrors(err)
+	if len(got) != 1 || got[0] != "no such file" {
+		t.Errorf("got %v, want the innermost error unwrapped", got)
+	}
+}
+
+func TestFlattenErrorsJoinedMultiple(t *testing.T) {
+	err := errors.Join(errors.New("first"), errors.New("second"))
+	got := flattenErrors(err)
+	want := []string{"first", "second"}
+	if !equalStrings(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestFlattenErrorsWrappedJoin(t *testing.T) {
+	// matches run()'s own shape: fmt.Errorf("converting %s:\n%w", in,
+	// errors.Join(errs...))
+	joined := errors.Join(errors.New("user: missing name"), errors.New("bad passwd"))
+	err := fmt.Errorf("converting x.yaml:\n%w", joined)
+	got := flattenErrors(err)
+	want := []string{"user: missing name", "bad passwd"}
+	if !equalStrings(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestFlattenErrorsNil(t *testing.T) {
+	if got := flattenErrors(nil); got != nil {
+		t.Errorf("got %v, want nil", got)
+	}
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestRunWritesToStdoutWhenOutIsEmpty(t *testing.T) {

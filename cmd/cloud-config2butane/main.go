@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,6 +19,7 @@ func main() {
 	in := flag.String("in", "", "path to the cloud-config YAML input file (required)")
 	out := flag.String("out", "", "path to write the generated Butane YAML (default: stdout)")
 	doValidate := flag.Bool("validate", true, "validate the generated Butane config against the real coreos/butane library")
+	jsonErrors := flag.Bool("json", false, "on failure, print errors as JSON instead of plain text")
 	flag.Parse()
 
 	if *in == "" {
@@ -26,9 +28,50 @@ func main() {
 	}
 
 	if err := run(*in, *out, *doValidate); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		if *jsonErrors {
+			printJSONError(err)
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(1)
 	}
+}
+
+func printJSONError(err error) {
+	out, marshalErr := json.MarshalIndent(struct {
+		Success bool     `json:"success"`
+		Errors  []string `json:"errors"`
+	}{Errors: flattenErrors(err)}, "", "  ")
+	if marshalErr != nil {
+		// json marshaling of a []string can't actually fail; this is
+		// just a safety net in case that ever changes.
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
+	fmt.Fprintln(os.Stderr, string(out))
+}
+
+// flattenErrors walks both errors.Join's Unwrap() []error and
+// fmt.Errorf's Unwrap() error down to the individual leaf errors, so
+// -json reports each distinct problem as its own array entry instead of
+// one giant string.
+func flattenErrors(err error) []string {
+	if err == nil {
+		return nil
+	}
+	if u, ok := err.(interface{ Unwrap() []error }); ok {
+		var out []string
+		for _, e := range u.Unwrap() {
+			out = append(out, flattenErrors(e)...)
+		}
+		return out
+	}
+	if u, ok := err.(interface{ Unwrap() error }); ok {
+		if inner := u.Unwrap(); inner != nil {
+			return flattenErrors(inner)
+		}
+	}
+	return []string{err.Error()}
 }
 
 func run(in, out string, doValidate bool) error {
