@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 210" font-family="ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace">
+  <style>
+    .bg { fill: #eef0ec; }
+    .track { fill: #e2e5df; }
+    .bar { fill: #3f8a5c; }
+    .label { fill: #12161b; font-size: 13px; }
+    .pct { fill: #4a5a68; font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #14181d; }
+      .track { fill: #1c2126; }
+      .bar { fill: #6bc48d; }
+      .label { fill: #eef0ec; }
+      .pct { fill: #9aa7b0; }
+    }
+  </style>
+  <rect class="bg" width="640" height="210" rx="4"/>
+
+  <!-- convert: 62 -->
+  <text class="label" x="16" y="24">convert</text>
+  <rect class="track" x="140" y="12" width="460" height="16" rx="2"/>
+  <rect class="bar" x="140" y="12" width="460" height="16" rx="2"/>
+  <text class="pct" x="610" y="24" text-anchor="end">62</text>
+
+  <!-- cloudconfig: 16 -->
+  <text class="label" x="16" y="62">cloudconfig</text>
+  <rect class="track" x="140" y="50" width="460" height="16" rx="2"/>
+  <rect class="bar" x="140" y="50" width="118.7" height="16" rx="2"/>
+  <text class="pct" x="610" y="62" text-anchor="end">16</text>
+
+  <!-- cmd (CLI): 11 -->
+  <text class="label" x="16" y="100">cmd (CLI)</text>
+  <rect class="track" x="140" y="88" width="460" height="16" rx="2"/>
+  <rect class="bar" x="140" y="88" width="81.6" height="16" rx="2"/>
+  <text class="pct" x="610" y="100" text-anchor="end">11</text>
+
+  <!-- validate: 5 -->
+  <text class="label" x="16" y="138">validate</text>
+  <rect class="track" x="140" y="126" width="460" height="16" rx="2"/>
+  <rect class="bar" x="140" y="126" width="37.1" height="16" rx="2"/>
+  <text class="pct" x="610" y="138" text-anchor="end">5</text>
+
+  <!-- butaneout: 4 -->
+  <text class="label" x="16" y="176">butaneout</text>
+  <rect class="track" x="140" y="164" width="460" height="16" rx="2"/>
+  <rect class="bar" x="140" y="164" width="29.7" height="16" rx="2"/>
+  <text class="pct" x="610" y="176" text-anchor="end">4</text>
+
+  <text class="pct" x="16" y="200" font-size="11">98 tests total, all passing</text>
+</svg>

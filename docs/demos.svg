@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 190" font-family="ui-monospace, 'Cascadia Code', 'JetBrains Mono', Consolas, monospace">
+  <style>
+    .bg { fill: #eef0ec; }
+    .card { fill: #e2e5df; stroke: #c9cdc3; stroke-width: 1; }
+    .title { fill: #12161b; font-size: 15px; font-weight: 600; }
+    .path { fill: #4a5a68; font-size: 11px; }
+    .desc { fill: #4a5a68; font-size: 11px; }
+    .badge-bg { fill: #e3f1e7; }
+    .badge-text { fill: #3f8a5c; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; }
+    .dur { fill: #4a5a68; font-size: 11px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #14181d; }
+      .card { fill: #1c2126; stroke: #2b3239; }
+      .title { fill: #eef0ec; }
+      .path { fill: #9aa7b0; }
+      .desc { fill: #9aa7b0; }
+      .badge-bg { fill: #16261c; }
+      .badge-text { fill: #6bc48d; }
+      .dur { fill: #9aa7b0; }
+    }
+  </style>
+  <rect class="bg" width="640" height="190" rx="4"/>
+
+  <!-- QEMU demo card -->
+  <rect class="card" x="16" y="16" width="296" height="158" rx="4"/>
+  <text class="title" x="34" y="46">QEMU boot demo</text>
+  <rect class="badge-bg" x="34" y="58" width="46" height="20" rx="2"/>
+  <text class="badge-text" x="57" y="72" text-anchor="middle">PASS</text>
+  <text class="dur" x="88" y="72">~15s</text>
+  <text class="path" x="34" y="98">e2e/qemu/</text>
+  <text class="desc" x="34" y="120">Real Flatcar VM boot, 5 assertions:</text>
+  <text class="desc" x="34" y="136">hostname, user, files, runcmd, bootcmd</text>
+  <text class="desc" x="34" y="158">validated against real coreos/butane</text>
+
+  <!-- CAPI+kind demo card -->
+  <rect class="card" x="328" y="16" width="296" height="158" rx="4"/>
+  <text class="title" x="346" y="46">CAPI + kind demo</text>
+  <rect class="badge-bg" x="346" y="58" width="46" height="20" rx="2"/>
+  <text class="badge-text" x="369" y="72" text-anchor="middle">PASS</text>
+  <text class="dur" x="400" y="72">~3m46s</text>
+  <text class="path" x="346" y="98">e2e/capi-kind/</text>
+  <text class="desc" x="346" y="120">Real CAPI + CAPD worker join,</text>
+  <text class="desc" x="346" y="136">control-plane + worker both Ready,</text>
+  <text class="desc" x="346" y="158">ignition/CLC bootstrap path confirmed</text>
+</svg>
