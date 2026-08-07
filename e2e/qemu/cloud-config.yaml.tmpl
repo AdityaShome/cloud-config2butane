@@ -1,0 +1,27 @@
+#cloud-config
+hostname: demo-worker
+users:
+  - name: core
+    ssh_authorized_keys:
+      - __SSH_PUBLIC_KEY__
+write_files:
+  - path: /etc/kubernetes/kubeadm-join-config.yaml
+    permissions: "0600"
+    content: |
+      apiVersion: kubeadm.k8s.io/v1beta3
+      kind: JoinConfiguration
+      discovery:
+        bootstrapToken:
+          apiServerEndpoint: 10.0.0.1:6443
+          token: abcdef.0123456789abcdef
+          unsafeSkipCAVerification: true
+      nodeRegistration:
+        criSocket: unix:///run/containerd/containerd.sock
+runcmd:
+  - [mkdir, -p, /var/lib/cloud-config2butane-demo]
+  - [sh, -c, "date -u +%FT%TZ > /var/lib/cloud-config2butane-demo/runcmd-ran"]
+bootcmd:
+  # /var/lib always exists this early in boot; the runcmd-created
+  # subdirectory above might not, depending on boot order, so bootcmd
+  # writes its own marker directly there instead of relying on it.
+  - [sh, -c, "date -u +%FT%TZ > /var/lib/cloud-config2butane-demo-bootcmd-ran"]
