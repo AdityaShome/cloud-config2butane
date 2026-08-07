@@ -24,16 +24,16 @@ type Config struct {
 
 // User is one entry of the top-level `users` list.
 type User struct {
-	Name              string       `yaml:"name"`
-	Groups            CommaList    `yaml:"groups"`
-	Sudo              StringOrList `yaml:"sudo"`
-	Shell             string       `yaml:"shell"`
-	SSHAuthorizedKeys []string     `yaml:"ssh_authorized_keys"`
-	Passwd            string       `yaml:"passwd"`
-	LockPasswd        *bool        `yaml:"lock_passwd"`
-	Gecos             string       `yaml:"gecos"`
-	PrimaryGroup      string       `yaml:"primary_group"`
-	NoCreateHome      bool         `yaml:"no_create_home"`
+	Name              string    `yaml:"name"`
+	Groups            CommaList `yaml:"groups"`
+	Sudo              SudoRules `yaml:"sudo"`
+	Shell             string    `yaml:"shell"`
+	SSHAuthorizedKeys []string  `yaml:"ssh_authorized_keys"`
+	Passwd            string    `yaml:"passwd"`
+	LockPasswd        *bool     `yaml:"lock_passwd"`
+	Gecos             string    `yaml:"gecos"`
+	PrimaryGroup      string    `yaml:"primary_group"`
+	NoCreateHome      bool      `yaml:"no_create_home"`
 }
 
 // Group is one entry of the top-level `groups` list: either a bare name or
@@ -186,14 +186,22 @@ func (l *CommaList) UnmarshalYAML(node *yaml.Node) error {
 	}
 }
 
-// StringOrList decodes fields that are a single string in the common case
-// but also accept a list, e.g. a user's `sudo` rules. Unlike CommaList, a
-// scalar here is kept whole rather than split on commas.
-type StringOrList []string
+// SudoRules decodes a user's `sudo` field: a single rule string, a list
+// of rule strings, or the literal false meaning no sudo access at all
+// (cloud-init's documented way to explicitly deny it). true has no
+// defined meaning for this field and is rejected rather than guessed at.
+type SudoRules []string
 
-func (l *StringOrList) UnmarshalYAML(node *yaml.Node) error {
+func (l *SudoRules) UnmarshalYAML(node *yaml.Node) error {
 	switch node.Kind {
 	case yaml.ScalarNode:
+		if node.Tag == "!!bool" {
+			if node.Value == "false" {
+				*l = nil
+				return nil
+			}
+			return typeErr(node, "sudo: %q is not a supported value (use a rule string, a list of rules, or false)", node.Value)
+		}
 		*l = []string{node.Value}
 		return nil
 	case yaml.SequenceNode:
@@ -204,7 +212,7 @@ func (l *StringOrList) UnmarshalYAML(node *yaml.Node) error {
 		*l = out
 		return nil
 	default:
-		return typeErr(node, "expected a string or a list of strings, got %s", kindName(node))
+		return typeErr(node, "expected a string, a list of strings, or false, got %s", kindName(node))
 	}
 }
 

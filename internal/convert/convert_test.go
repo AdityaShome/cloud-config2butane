@@ -65,7 +65,7 @@ func TestConvertGroupMembershipForUnknownUserIsDropped(t *testing.T) {
 func TestConvertSudoFileMergedIntoStorageFiles(t *testing.T) {
 	cfg := &cloudconfig.Config{
 		Users: []cloudconfig.User{
-			{Name: "alice", Sudo: cloudconfig.StringOrList{"ALL=(ALL) NOPASSWD:ALL"}},
+			{Name: "alice", Sudo: cloudconfig.SudoRules{"ALL=(ALL) NOPASSWD:ALL"}},
 		},
 	}
 	out, errs := Convert(cfg)

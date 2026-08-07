@@ -81,13 +81,40 @@ users:
     sudo:
       - ALL=(ALL) NOPASSWD:ALL
 `
-	want := StringOrList{"ALL=(ALL) NOPASSWD:ALL"}
+	want := SudoRules{"ALL=(ALL) NOPASSWD:ALL"}
 
 	for _, doc := range []string{stringForm, listForm} {
 		cfg := mustParse(t, doc)
 		if !reflect.DeepEqual(cfg.Users[0].Sudo, want) {
 			t.Errorf("doc %q: got sudo %v, want %v", doc, cfg.Users[0].Sudo, want)
 		}
+	}
+}
+
+func TestParseUserSudoFalseMeansNoSudo(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    sudo: false
+`
+	cfg := mustParse(t, doc)
+	if cfg.Users[0].Sudo != nil {
+		t.Errorf("got sudo %v, want nil (no sudo access)", cfg.Users[0].Sudo)
+	}
+}
+
+func TestParseUserSudoTrueRejected(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    sudo: true
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for sudo: true, got nil")
+	}
+	if !strings.Contains(err.Error(), "sudo") {
+		t.Errorf("got %v, want an error mentioning sudo", err)
 	}
 }
 

@@ -152,7 +152,7 @@ func TestUsersTopLevelSSHKeysDoNotLeakToOtherUsers(t *testing.T) {
 
 func TestUsersSudoStringAndListProduceSameLine(t *testing.T) {
 	stringForm := []cloudconfig.User{
-		{Name: "alice", Sudo: cloudconfig.StringOrList{"ALL=(ALL) NOPASSWD:ALL"}},
+		{Name: "alice", Sudo: cloudconfig.SudoRules{"ALL=(ALL) NOPASSWD:ALL"}},
 	}
 	_, fileA, _ := Users(stringForm, nil)
 	if fileA == nil || fileA.Contents.Inline == nil {
@@ -171,8 +171,8 @@ func TestUsersSudoStringAndListProduceSameLine(t *testing.T) {
 
 func TestUsersSudoMultipleUsersCombinedInOneFile(t *testing.T) {
 	users := []cloudconfig.User{
-		{Name: "alice", Sudo: cloudconfig.StringOrList{"ALL=(ALL) NOPASSWD:ALL"}},
-		{Name: "bob", Sudo: cloudconfig.StringOrList{"ALL=(ALL) ALL"}},
+		{Name: "alice", Sudo: cloudconfig.SudoRules{"ALL=(ALL) NOPASSWD:ALL"}},
+		{Name: "bob", Sudo: cloudconfig.SudoRules{"ALL=(ALL) ALL"}},
 	}
 	_, sudoFile, _ := Users(users, nil)
 	want := "alice ALL=(ALL) NOPASSWD:ALL\nbob ALL=(ALL) ALL\n"
@@ -191,7 +191,7 @@ func TestUsersNoSudoMeansNoSudoFile(t *testing.T) {
 
 func TestUsersSudoBlankRuleIgnored(t *testing.T) {
 	users := []cloudconfig.User{
-		{Name: "alice", Sudo: cloudconfig.StringOrList{"  ", "ALL=(ALL) NOPASSWD:ALL"}},
+		{Name: "alice", Sudo: cloudconfig.SudoRules{"  ", "ALL=(ALL) NOPASSWD:ALL"}},
 	}
 	_, sudoFile, _ := Users(users, nil)
 	want := "alice ALL=(ALL) NOPASSWD:ALL\n"
