@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	butane "github.com/coreos/butane/base/v0_5"
 	butane1_1 "github.com/coreos/butane/config/flatcar/v1_1"
 )
@@ -72,6 +74,13 @@ func TestMarshalFormatsModeAsOctal(t *testing.T) {
 	}
 	if !strings.Contains(string(out), "mode: 0644") {
 		t.Errorf("expected octal mode formatting, got:\n%s", out)
+	}
+}
+
+func TestIsEmptyUnknownNodeKind(t *testing.T) {
+	// exercising the default case directly instead of leaving it untested.
+	if isEmpty(&yaml.Node{Kind: yaml.AliasNode}) {
+		t.Error("expected an unrecognized node kind to not be treated as empty")
 	}
 }
 

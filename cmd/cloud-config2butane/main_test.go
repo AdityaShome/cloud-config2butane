@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -134,6 +136,48 @@ func equalStrings(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.Stderr = w
+
+	fn()
+
+	w.Close()
+	os.Stderr = old
+
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}
+
+func TestPrintJSONErrorShape(t *testing.T) {
+	out := captureStderr(t, func() {
+		printJSONError(errors.Join(errors.New("first"), errors.New("second")))
+	})
+
+	var parsed struct {
+		Success bool     `json:"success"`
+		Errors  []string `json:"errors"`
+	}
+	if err := json.Unmarshal([]byte(out), &parsed); err != nil {
+		t.Fatalf("output isn't valid JSON: %v\noutput: %s", err, out)
+	}
+	if parsed.Success {
+		t.Error("expected success=false")
+	}
+	want := []string{"first", "second"}
+	if !equalStrings(parsed.Errors, want) {
+		t.Errorf("got errors %v, want %v", parsed.Errors, want)
+	}
 }
 
 func TestRunWritesToStdoutWhenOutIsEmpty(t *testing.T) {

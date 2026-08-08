@@ -296,3 +296,169 @@ func TestParseFQDNWithoutHostname(t *testing.T) {
 		t.Errorf("got fqdn=%q hostname=%q", cfg.FQDN, cfg.Hostname)
 	}
 }
+
+func TestParseGroupsNotAList(t *testing.T) {
+	_, err := Parse([]byte("groups: not-a-list\n"))
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+}
+
+func TestParseGroupEntryWrongKind(t *testing.T) {
+	_, err := Parse([]byte("groups:\n  - [a, b]\n"))
+	if err == nil {
+		t.Fatal("expected an error for a list-shaped group entry, got nil")
+	}
+}
+
+func TestParseGroupMembersInvalid(t *testing.T) {
+	_, err := Parse([]byte("groups:\n  - admingroup: not-a-list\n"))
+	if err == nil {
+		t.Fatal("expected an error for non-list group members, got nil")
+	}
+}
+
+func TestParseRunCmdNotAList(t *testing.T) {
+	_, err := Parse([]byte("runcmd: not-a-list\n"))
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+}
+
+func TestParseRunCmdArgvDecodeError(t *testing.T) {
+	_, err := Parse([]byte("runcmd:\n  - [1, {a: b}]\n"))
+	if err == nil {
+		t.Fatal("expected an error for a non-string argv element, got nil")
+	}
+}
+
+func TestParseRunCmdEntryWrongKind(t *testing.T) {
+	_, err := Parse([]byte("runcmd:\n  - {a: b}\n"))
+	if err == nil {
+		t.Fatal("expected an error for a map-shaped runcmd entry, got nil")
+	}
+}
+
+func TestParseUserGroupsSequenceDecodeError(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    groups: [[a, b]]
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a nested-list group entry, got nil")
+	}
+}
+
+func TestParseUserGroupsWrongKind(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    groups: {a: b}
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a map-shaped groups field, got nil")
+	}
+}
+
+func TestParseUserSudoSequenceDecodeError(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    sudo: [[a, b]]
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a nested-list sudo entry, got nil")
+	}
+}
+
+func TestParseUserSudoWrongKind(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    sudo: {a: b}
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a map-shaped sudo field, got nil")
+	}
+}
+
+func TestParsePermissionsWrongKind(t *testing.T) {
+	doc := `
+write_files:
+  - path: /etc/foo
+    permissions: [1, 2]
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a list-shaped permissions field, got nil")
+	}
+}
+
+func TestParsePermissionsEmptyString(t *testing.T) {
+	doc := `
+write_files:
+  - path: /etc/foo
+    permissions: ""
+`
+	cfg := mustParse(t, doc)
+	if cfg.WriteFiles[0].Permissions.IsSet() {
+		t.Errorf("expected permissions to be unset for an empty string, got %v", cfg.WriteFiles[0].Permissions)
+	}
+}
+
+func TestParseUserGroupsEmptyString(t *testing.T) {
+	doc := `
+users:
+  - name: alice
+    groups: ""
+`
+	cfg := mustParse(t, doc)
+	if cfg.Users[0].Groups != nil {
+		t.Errorf("expected nil groups for an empty string, got %v", cfg.Users[0].Groups)
+	}
+}
+
+func TestParseRunCmdAliasNodeRejected(t *testing.T) {
+	// A YAML alias reference is neither a scalar, a sequence, nor a map -
+	// this is the only realistic way to reach kindName's default branch.
+	doc := "runcmd:\n  - &a foo\n  - *a\n"
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for an alias-shaped runcmd entry, got nil")
+	}
+}
+
+func TestParseErrorString(t *testing.T) {
+	withLine := &ParseError{Line: 5, Msg: "boom"}
+	if got := withLine.Error(); got != "line 5: boom" {
+		t.Errorf("got %q", got)
+	}
+
+	withoutLine := &ParseError{Msg: "boom"}
+	if got := withoutLine.Error(); got != "boom" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestParseErrorFromLineFallbacks(t *testing.T) {
+	cases := []string{
+		"no line prefix here",
+		"line not-a-number: boom",
+		"line 5 no colon here",
+	}
+	for _, s := range cases {
+		err := parseErrorFromLine(s)
+		pe, ok := err.(*ParseError)
+		if !ok {
+			t.Fatalf("%q: got %T, want *ParseError", s, err)
+		}
+		if pe.Line != 0 || pe.Msg != s {
+			t.Errorf("%q: got Line=%d Msg=%q, want Line=0 Msg=%q", s, pe.Line, pe.Msg, s)
+		}
+	}
+}
