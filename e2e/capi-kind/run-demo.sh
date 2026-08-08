@@ -76,6 +76,7 @@ kubectl wait --for=condition=ControlPlaneInitialized "cluster/$WORKLOAD_CLUSTER_
 
 log "fetching the workload cluster's kubeconfig"
 clusterctl get kubeconfig "$WORKLOAD_CLUSTER_NAME" > "$WORK_DIR/workload-kubeconfig"
+log "workload kubeconfig ready: KUBECONFIG=$WORK_DIR/workload-kubeconfig"
 
 log "installing kindnet so nodes can go Ready"
 KUBECONFIG="$WORK_DIR/workload-kubeconfig" kubectl apply -f "$SCRIPT_DIR/manifests/cni/kindnet.yaml"
