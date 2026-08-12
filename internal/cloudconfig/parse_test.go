@@ -118,6 +118,31 @@ users:
 	}
 }
 
+func TestParseUserSudoRuleWithNewlineRejected(t *testing.T) {
+	// A rule containing its own newline would inject an extra, unrelated
+	// line into the generated sudoers.d file instead of staying part of
+	// this one rule - see checkSudoRule.
+	doc := "users:\n  - name: alice\n    sudo: \"ALL=(ALL) NOPASSWD:ALL\\nroot ALL=(ALL) NOPASSWD:ALL\"\n"
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a sudo rule containing a newline, got nil")
+	}
+	if !strings.Contains(err.Error(), "newline") {
+		t.Errorf("got %v, want an error mentioning newline", err)
+	}
+}
+
+func TestParseUserSudoRuleWithNewlineRejectedListForm(t *testing.T) {
+	doc := "users:\n  - name: alice\n    sudo:\n      - \"ALL=(ALL) NOPASSWD:ALL\\nroot ALL=(ALL) NOPASSWD:ALL\"\n"
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a sudo rule containing a newline, got nil")
+	}
+	if !strings.Contains(err.Error(), "newline") {
+		t.Errorf("got %v, want an error mentioning newline", err)
+	}
+}
+
 func TestParseRunCmdBothForms(t *testing.T) {
 	doc := `
 runcmd:

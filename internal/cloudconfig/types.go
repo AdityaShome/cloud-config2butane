@@ -202,18 +202,38 @@ func (l *SudoRules) UnmarshalYAML(node *yaml.Node) error {
 			}
 			return typeErr(node, "sudo: %q is not a supported value (use a rule string, a list of rules, or false)", node.Value)
 		}
+		if err := checkSudoRule(node); err != nil {
+			return err
+		}
 		*l = []string{node.Value}
 		return nil
 	case yaml.SequenceNode:
-		var out []string
-		if err := node.Decode(&out); err != nil {
-			return typeErr(node, "expected a list of strings")
+		out := make([]string, 0, len(node.Content))
+		for _, item := range node.Content {
+			if item.Kind != yaml.ScalarNode {
+				return typeErr(item, "sudo: expected a rule string")
+			}
+			if err := checkSudoRule(item); err != nil {
+				return err
+			}
+			out = append(out, item.Value)
 		}
 		*l = out
 		return nil
 	default:
 		return typeErr(node, "expected a string, a list of strings, or false, got %s", kindName(node))
 	}
+}
+
+// checkSudoRule rejects an embedded newline in a sudo rule. Each rule
+// becomes one line of a generated sudoers.d file (see convert.Users); a
+// rule containing its own newline would inject an unrelated, independent
+// sudoers line rather than staying part of this rule.
+func checkSudoRule(node *yaml.Node) error {
+	if strings.ContainsAny(node.Value, "\n\r") {
+		return typeErr(node, "sudo: rule must not contain newlines")
+	}
+	return nil
 }
 
 func kindName(node *yaml.Node) string {
