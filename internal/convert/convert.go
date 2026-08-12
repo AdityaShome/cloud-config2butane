@@ -47,6 +47,9 @@ func Convert(cfg *cloudconfig.Config) (*butane1_1.Config, []error) {
 	files, dupErrs := dedupeFilePaths(files)
 	errs = append(errs, dupErrs...)
 
+	units, dupUnitErrs := dedupeUnitNames(units)
+	errs = append(errs, dupUnitErrs...)
+
 	out := &butane1_1.Config{
 		Config: butane.Config{
 			Version: butaneVersion,
@@ -81,6 +84,23 @@ func dedupeFilePaths(files []butane.File) ([]butane.File, []error) {
 		}
 		seen[f.Path] = true
 		out = append(out, f)
+	}
+	return out, errs
+}
+
+// dedupeUnitNames keeps the first systemd unit per name and errors on
+// any later one that reuses it, including our own generated units.
+func dedupeUnitNames(units []butane.Unit) ([]butane.Unit, []error) {
+	seen := map[string]bool{}
+	var out []butane.Unit
+	var errs []error
+	for _, u := range units {
+		if seen[u.Name] {
+			errs = append(errs, fmt.Errorf("write_files: systemd unit %s is defined by more than one file", u.Name))
+			continue
+		}
+		seen[u.Name] = true
+		out = append(out, u)
 	}
 	return out, errs
 }

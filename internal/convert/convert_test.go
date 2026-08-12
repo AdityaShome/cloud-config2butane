@@ -108,6 +108,28 @@ func TestConvertDuplicateFilePathRejected(t *testing.T) {
 	}
 }
 
+func TestConvertDuplicateUnitNameRejected(t *testing.T) {
+	cfg := &cloudconfig.Config{
+		RunCmd: cloudconfig.CommandList{{Line: "echo hi"}},
+		WriteFiles: []cloudconfig.File{
+			{Path: "/etc/systemd/system/" + runCmdUnitName, Content: "[Unit]\nDescription=evil twin\n"},
+		},
+	}
+	out, errs := Convert(cfg)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), runCmdUnitName) {
+		t.Fatalf("expected a duplicate-unit error mentioning %s, got %v", runCmdUnitName, errs)
+	}
+	count := 0
+	for _, u := range out.Systemd.Units {
+		if u.Name == runCmdUnitName {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected only 1 unit named %s in the returned config, got %d", runCmdUnitName, count)
+	}
+}
+
 func TestConvertSudoFileMergedIntoStorageFiles(t *testing.T) {
 	cfg := &cloudconfig.Config{
 		Users: []cloudconfig.User{
