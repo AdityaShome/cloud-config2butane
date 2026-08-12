@@ -200,6 +200,34 @@ func TestUsersSudoBlankRuleIgnored(t *testing.T) {
 	}
 }
 
+func TestUsersDuplicateNameRejected(t *testing.T) {
+	users := []cloudconfig.User{
+		{Name: "alice", SSHAuthorizedKeys: []string{"ssh-ed25519 first"}},
+		{Name: "alice", Sudo: cloudconfig.SudoRules{"ALL=(ALL) NOPASSWD:ALL"}},
+	}
+	out, _, errs := Users(users, nil)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "duplicate") {
+		t.Fatalf("expected a duplicate-name error, got %v", errs)
+	}
+	if len(out) != 1 || len(out[0].SSHAuthorizedKeys) != 1 {
+		t.Fatalf("expected only the first entry to be kept, got %+v", out)
+	}
+}
+
+func TestUsersDuplicateNameViaDefaultAliasRejected(t *testing.T) {
+	users := []cloudconfig.User{
+		{Name: "default", SSHAuthorizedKeys: []string{"ssh-ed25519 default-key"}},
+		{Name: "core", Sudo: cloudconfig.SudoRules{"ALL=(ALL) NOPASSWD:ALL"}},
+	}
+	out, _, errs := Users(users, nil)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "duplicate") {
+		t.Fatalf("expected a duplicate-name error, got %v", errs)
+	}
+	if len(out) != 1 || len(out[0].SSHAuthorizedKeys) != 1 {
+		t.Fatalf("expected only the \"default\" entry to be kept, got %+v", out)
+	}
+}
+
 func TestUsersNoCreateHome(t *testing.T) {
 	users := []cloudconfig.User{{Name: "alice", NoCreateHome: true}}
 	out, _, _ := Users(users, nil)

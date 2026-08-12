@@ -34,6 +34,7 @@ func Users(users []cloudconfig.User, topLevelSSHKeys []string) ([]butane.PasswdU
 	var out []butane.PasswdUser
 	var errs []error
 	var sudoLines []string
+	seen := map[string]bool{}
 
 	for _, u := range users {
 		if u.Name == "" {
@@ -41,6 +42,11 @@ func Users(users []cloudconfig.User, topLevelSSHKeys []string) ([]butane.PasswdU
 			continue
 		}
 		name := canonicalUserName(u.Name)
+		if seen[name] {
+			errs = append(errs, fmt.Errorf("user %s: duplicate user name (note: \"default\" is an alias for %q)", name, defaultUserName))
+			continue
+		}
+		seen[name] = true
 
 		bu := butane.PasswdUser{Name: name}
 
