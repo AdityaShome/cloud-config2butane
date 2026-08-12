@@ -1,6 +1,7 @@
 package convert
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/AdityaShome/cloud-config2butane/internal/cloudconfig"
@@ -82,6 +83,28 @@ func TestConvertGroupMembershipForUnknownUserIsDropped(t *testing.T) {
 	}
 	if len(out.Passwd.Groups) != 1 {
 		t.Errorf("expected the group itself to still be created, got %v", out.Passwd.Groups)
+	}
+}
+
+func TestConvertDuplicateFilePathRejected(t *testing.T) {
+	cfg := &cloudconfig.Config{
+		Hostname: "node1",
+		WriteFiles: []cloudconfig.File{
+			{Path: "/etc/hostname", Content: "user-supplied\n"},
+		},
+	}
+	out, errs := Convert(cfg)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "/etc/hostname") {
+		t.Fatalf("expected a duplicate-path error mentioning /etc/hostname, got %v", errs)
+	}
+	count := 0
+	for _, f := range out.Storage.Files {
+		if f.Path == "/etc/hostname" {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected only 1 file at /etc/hostname in the returned config, got %d", count)
 	}
 }
 

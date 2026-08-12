@@ -1,6 +1,8 @@
 package convert
 
 import (
+	"fmt"
+
 	butane "github.com/coreos/butane/base/v0_5"
 	butane1_1 "github.com/coreos/butane/config/flatcar/v1_1"
 
@@ -42,6 +44,9 @@ func Convert(cfg *cloudconfig.Config) (*butane1_1.Config, []error) {
 		units = append(units, *unit)
 	}
 
+	files, dupErrs := dedupeFilePaths(files)
+	errs = append(errs, dupErrs...)
+
 	out := &butane1_1.Config{
 		Config: butane.Config{
 			Version: butaneVersion,
@@ -59,6 +64,24 @@ func Convert(cfg *cloudconfig.Config) (*butane1_1.Config, []error) {
 		},
 	}
 
+	return out, errs
+}
+
+// dedupeFilePaths keeps the first storage.files entry per path and
+// errors on any later one that reuses it, including our own generated
+// files.
+func dedupeFilePaths(files []butane.File) ([]butane.File, []error) {
+	seen := map[string]bool{}
+	var out []butane.File
+	var errs []error
+	for _, f := range files {
+		if seen[f.Path] {
+			errs = append(errs, fmt.Errorf("write_files: path %s is used by more than one file", f.Path))
+			continue
+		}
+		seen[f.Path] = true
+		out = append(out, f)
+	}
 	return out, errs
 }
 
