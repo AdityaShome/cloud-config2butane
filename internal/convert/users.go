@@ -58,7 +58,12 @@ func Users(users []cloudconfig.User, topLevelSSHKeys []string) ([]butane.PasswdU
 			bu.SSHAuthorizedKeys = append(bu.SSHAuthorizedKeys, butane.SSHAuthorizedKey(k))
 		}
 
+		seenGroup := map[string]bool{}
 		for _, g := range u.Groups {
+			if seenGroup[g] {
+				continue
+			}
+			seenGroup[g] = true
 			bu.Groups = append(bu.Groups, butane.Group(g))
 		}
 

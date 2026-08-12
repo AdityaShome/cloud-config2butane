@@ -21,7 +21,8 @@ func Convert(cfg *cloudconfig.Config) (*butane1_1.Config, []error) {
 	users, sudoFile, userErrs := Users(cfg.Users, cfg.SSHAuthorizedKeys)
 	errs = append(errs, userErrs...)
 
-	groups, membership := Groups(cfg.Groups)
+	groups, membership, groupErrs := Groups(cfg.Groups)
+	errs = append(errs, groupErrs...)
 	applyGroupMembership(users, membership)
 
 	files, systemdUnits, fileErrs := Files(cfg.WriteFiles)
@@ -109,11 +110,22 @@ func dedupeUnitNames(units []butane.Unit) ([]butane.Unit, []error) {
 // member of onto that user's own Groups, since Butane has no separate
 // "initial members" concept on passwd.groups. A member name with no
 // matching users[] entry has nowhere to attach the group and is simply
-// not applied - see Groups' doc comment.
+// not applied - see Groups' doc comment. A group already present on the
+// user (e.g. also listed in their own users[].groups) is skipped rather
+// than added twice - real butane rejects a duplicate group entry outright.
 func applyGroupMembership(users []butane.PasswdUser, membership map[string][]string) {
 	for i := range users {
+		has := map[butane.Group]bool{}
+		for _, g := range users[i].Groups {
+			has[g] = true
+		}
 		for _, g := range membership[users[i].Name] {
-			users[i].Groups = append(users[i].Groups, butane.Group(g))
+			group := butane.Group(g)
+			if has[group] {
+				continue
+			}
+			has[group] = true
+			users[i].Groups = append(users[i].Groups, group)
 		}
 	}
 }

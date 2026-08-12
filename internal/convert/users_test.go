@@ -73,6 +73,16 @@ func TestUsersGroups(t *testing.T) {
 	}
 }
 
+func TestUsersGroupsDedupesDuplicateEntry(t *testing.T) {
+	users := []cloudconfig.User{
+		{Name: "alice", Groups: cloudconfig.CommaList{"wheel", "wheel"}},
+	}
+	out, _, _ := Users(users, nil)
+	if len(out[0].Groups) != 1 || string(out[0].Groups[0]) != "wheel" {
+		t.Errorf("got groups %v, want a single wheel entry", out[0].Groups)
+	}
+}
+
 func TestUsersPasswdHashedAndLocked(t *testing.T) {
 	users := []cloudconfig.User{
 		{Name: "alice", Passwd: "$6$rounds=4096$salt$hash"},
