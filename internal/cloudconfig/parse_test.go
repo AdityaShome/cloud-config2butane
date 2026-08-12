@@ -231,6 +231,20 @@ write_files:
 	}
 }
 
+func TestParseNegativePermissionsRejected(t *testing.T) {
+	// Negative modes break the marshaler's octal reformatting into
+	// invalid YAML like "0-1".
+	doc := `
+write_files:
+  - path: /etc/foo
+    permissions: "-1"
+`
+	_, err := Parse([]byte(doc))
+	if err == nil {
+		t.Fatal("expected an error for a negative permissions value, got nil")
+	}
+}
+
 func TestParseMissingHeaderStillParses(t *testing.T) {
 	doc := "hostname: node1\n"
 	cfg := mustParse(t, doc)

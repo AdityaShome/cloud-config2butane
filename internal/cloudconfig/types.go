@@ -113,6 +113,11 @@ func (m *FileMode) UnmarshalYAML(node *yaml.Node) error {
 	if err != nil {
 		return typeErr(node, "permissions: %q is not a valid octal mode", raw)
 	}
+	// ParseInt allows a leading "-"; negative modes break the
+	// marshaler's octal reformatting into invalid YAML like "0-1".
+	if v < 0 {
+		return typeErr(node, "permissions: %q is not a valid octal mode", raw)
+	}
 	m.Value = int(v)
 	m.isSet = true
 	return nil
