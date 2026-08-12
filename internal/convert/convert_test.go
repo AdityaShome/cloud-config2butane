@@ -44,6 +44,29 @@ func TestConvertGroupMembershipMergedIntoMatchingUser(t *testing.T) {
 	}
 }
 
+func TestConvertGroupMembershipForDefaultUserResolvesAfterRename(t *testing.T) {
+	cfg := &cloudconfig.Config{
+		Users: []cloudconfig.User{{Name: "default"}},
+		Groups: cloudconfig.GroupList{
+			{Name: "wheel", Members: []string{"default"}},
+		},
+	}
+	out, errs := Convert(cfg)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(out.Passwd.Users) != 1 {
+		t.Fatalf("expected 1 user, got %d", len(out.Passwd.Users))
+	}
+	u := out.Passwd.Users[0]
+	if u.Name != defaultUserName {
+		t.Fatalf("expected user renamed to %q, got %q", defaultUserName, u.Name)
+	}
+	if len(u.Groups) != 1 || string(u.Groups[0]) != "wheel" {
+		t.Errorf("expected %q's group membership to survive the default->%s rename, got %v", "default", defaultUserName, u.Groups)
+	}
+}
+
 func TestConvertGroupMembershipForUnknownUserIsDropped(t *testing.T) {
 	cfg := &cloudconfig.Config{
 		Groups: cloudconfig.GroupList{

@@ -16,6 +16,15 @@ const defaultUserName = "core"
 
 const sudoDropinPath = "/etc/sudoers.d/90-cloud-config2butane"
 
+// canonicalUserName resolves "default" everywhere, so renamed and
+// pre-rename references (e.g. groups[].members) still match.
+func canonicalUserName(name string) string {
+	if name == "default" {
+		return defaultUserName
+	}
+	return name
+}
+
 // Users converts cloud-config users into Butane passwd users. Top-level
 // ssh_authorized_keys are merged into the default user's keys, matching
 // cloud-init's own semantics. Any user with a `sudo` rule gets a line in
@@ -31,10 +40,7 @@ func Users(users []cloudconfig.User, topLevelSSHKeys []string) ([]butane.PasswdU
 			errs = append(errs, fmt.Errorf("user: missing name"))
 			continue
 		}
-		name := u.Name
-		if name == "default" {
-			name = defaultUserName
-		}
+		name := canonicalUserName(u.Name)
 
 		bu := butane.PasswdUser{Name: name}
 
