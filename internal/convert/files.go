@@ -133,15 +133,22 @@ func decodeContent(content, encoding string) (string, error) {
 	}
 }
 
+// maxDecompressedContentSize guards against a decompression bomb. A var,
+// not a const, so tests can shrink it instead of decompressing tens of MB.
+var maxDecompressedContentSize int64 = 64 << 20 // 64 MiB
+
 func gunzip(data []byte) (string, error) {
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("invalid gzip content: %w", err)
 	}
 	defer r.Close()
-	out, err := io.ReadAll(r)
+	out, err := io.ReadAll(io.LimitReader(r, maxDecompressedContentSize+1))
 	if err != nil {
 		return "", fmt.Errorf("invalid gzip content: %w", err)
+	}
+	if int64(len(out)) > maxDecompressedContentSize {
+		return "", fmt.Errorf("gzip content decompresses to more than %d bytes", maxDecompressedContentSize)
 	}
 	return string(out), nil
 }

@@ -135,6 +135,23 @@ func TestFilesTruncatedGzipBody(t *testing.T) {
 	}
 }
 
+func TestFilesGzipDecompressionBombRejected(t *testing.T) {
+	// Shrink the cap instead of pushing tens of MB through a real gzip
+	// round trip just to exercise the limit.
+	orig := maxDecompressedContentSize
+	maxDecompressedContentSize = 16
+	defer func() { maxDecompressedContentSize = orig }()
+
+	compressed := gzipBytes(t, strings.Repeat("a", 1000))
+	files := []cloudconfig.File{
+		{Path: "/etc/motd", Content: string(compressed), Encoding: "gzip"},
+	}
+	_, _, errs := Files(files)
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "decompresses to more than") {
+		t.Fatalf("got %v", errs)
+	}
+}
+
 func TestFilesUnsupportedEncoding(t *testing.T) {
 	files := []cloudconfig.File{
 		{Path: "/etc/motd", Content: "x", Encoding: "rot13"},
